@@ -144,9 +144,9 @@ if [ "$TOOLCHAIN" == clang  ]; then
                               CC=clang \
                               CLANG_TRIPLE=aarch64-linux-gnu- \
                               CROSS_COMPILE=aarch64-linux-android- \
-	                      CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-	                      CONFIG_DEBUG_SECTION_MISMATCH=y \
-	                      CONFIG_NO_ERROR_ON_MISMATCH=y   2>&1 | tee error.log
+	                          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+	                          CONFIG_DEBUG_SECTION_MISMATCH=y \
+	                          CONFIG_NO_ERROR_ON_MISMATCH=y   2>&1 | tee error.log
 elif [ "$TOOLCHAIN" == gcc  ]; then
 	echo gcc
 	make -j$(nproc --all) O=out \
@@ -206,7 +206,7 @@ KERVER=$(make kernelversion)
                 zip -r "$ZIP" *
                 curl -sLo zipsigner-3.0.jar https://github.com/malkist01/zipsigner/-/raw/master/bin/zipsigner-3.0-dexed.jar
                 java -jar zipsigner-3.0.jar "$ZIP".zip "$ZIP"-signed.zip
-                tg_post_msg "<b>=============================</b> %0A <b>× TeletubiesKernel For Redmi note 4/4x ×</b> %0A <b>=============================</b> %0A%0A <b>Date : </b> <code>$(TZ=Asia/Jakarta date)</code> %0A%0A <b>Device Code Name:</b> <code>$CODENAME</code> %0A%0A <b>Kernel Version :</b> <code>$KERVER</code> %0A%0A <b>Developer:</b> @Teletubies %0A%0A <b>Support group:</b> t.me/teletubieskernelmido %0A%0A <b>Channel:</b> t.me/teletubiesupdates %0A%0A <b>Changelog:</b> %0A https://github.com/malkist01/kernel_mido/commits/normal %0A%0A <b>Download Normal version:</b> %0A https://t.me/fkupdates/ %0A%0A <b>Download Ksu version:</b> %0A https://t.me/teletubies/ #teletubieskernel #mido" "$CHATID"
+                tg_post_msg "<b>=============================</b> %0A <b>× TeletubiesKernel For Redmi note 4/4x ×</b> %0A <b>=============================</b> %0A%0A <b>Date : </b> <code>$(TZ=Asia/Jakarta date)</code> %0A%0A <b>Device Code Name:</b> <code>$CODENAME</code> %0A%0A <b>Kernel Version :</b> <code>$KERVER</code> %0A%0A "$CHATID"
                 tg_post_build "$ZIP"-signed.zip "$CHATID"
                 cd ..
                 rm -rf error.log
@@ -215,4 +215,3 @@ KERVER=$(make kernelversion)
                 rm -rf testing.log
                 exit
         fi
-
