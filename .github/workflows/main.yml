@@ -1,24 +1,29 @@
-name: mido
+name: mido-main
 on:
-  workflow_dispatch:
+   workflow_dispatch:
 
 jobs:
-  sleepybuild:
-    runs-on: ubuntu-22.04
+  teletubiesbuild:
+       runs-on: ubuntu-22.04
 
-    steps:
-    - name: Creating Env!
-      uses: actions/checkout@v2
+       steps:
+       - name: Creating env!
+         uses: actions/checkout@v2
 
-    - name: Setting up Env!
-      run: |
-         sudo apt-get update
-         sudo apt-get install --no-install-recommends -y binutils binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python3 aria2 clang gcc gcc-arm-linux-gnueabi gcc-aarch64-linux-gnu libffi-dev libncurses5-dev libreadline-dev libsqlite3-dev pigz libarchive-tools software-properties-common openssl ssh wget nano ca-certificates zstd lld llvm g++-aarch64-linux-gnu libelf-dev neofetch
-    - name: Building Kernel..
-      run: |
-          chmod +x build.sh && bash build.sh
-      shell: bash
-      env:
-         TZ: Asia/Jakarta
-         CHATID: ${{ secrets.CHAT_ID }}
-         API_BOT: ${{ secrets.BOT_API }}
+       - name: Setting up env!
+         run: |
+              sudo -E apt-get -qq update
+              sudo -E apt-get -qq install git make bc bison -y ccache \
+              openssl curl zip kmod cpio flex libelf-dev \
+              libssl-dev libtfm-dev wget device-tree-compiler \
+              ca-certificates python3 python2 binutils \
+              binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi
+       - name: Building Kernel...
+         run: |
+             chmod +x build.sh && bash build.sh
+             shell: bash
+             env:
+              TZ: Asia/Jakarta
+              CHATID: ${{ secrets.CHAT_ID }}
+              API_BOT: ${{ secrets.BOT_API }}
+
