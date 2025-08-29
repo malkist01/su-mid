@@ -1,222 +1,217 @@
 #!/bin/bash
+#
+# Copyright (C) 2020 Fox kernel project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-#=============================#
-#        CONFIG SECTION       #
-#=============================#
+# Setup colour for the script
+yellow='\033[0;33m'
+white='\033[0m'
+red='\033[0;31m'
+green='\e[0;32m'
 
-# Set kernel directory to current working directory
-KERNEL_DIR="$(pwd)"
+# Deleting out "kernel complied" and zip "anykernel" from an old compilation
+echo -e "$green << cleanup >> \n $white"
 
-rm -rf KernelSU
+rm -rf out
+rm -rf zip
+rm -rf error.log
 
-# integrate kernelsu-next
-curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s nongki
+echo -e "$green << setup dirs >> \n $white"
 
-# Set output directory for the build
-OUT_DIR="$KERNEL_DIR/out"
+# With that setup , the script will set dirs and few important thinks
 
-# Path to compiled kernel image directory
-KERNEL_IMAGE_DIR="$OUT_DIR/arch/arm64/boot"
+MY_DIR="${BASH_SOURCE%/*}"
+if [[ ! -d "$MY_DIR" ]]; then MY_DIR="$PWD"; fi
 
-# Path to kernel image
-KERNEL_IMAGE="$KERNEL_IMAGE_DIR/Image.gz-dtb"
+# Now u can chose which things need to be modified
+# CHATID = chatid of a telegram group/channel
+# API_BOT = api bot of a telegram bot
+#
+# DEVICE = your device codename
+# KERNEL_NAME = the name of ur kranul
+#
+# DEFCONFIG = defconfig that will be used to compile the kernel
+#
+# AnyKernel = the url of your modified anykernel script
+# AnyKernelbranch = the branch of your modified anykernel script
+#
+# HOSST = build host
+# USEER = build user
+#
+# TOOLCHAIN = the toolchain u want to use "gcc/clang"
 
-# Path to clang
-git clone https://gitlab.com/LeCmnGend/clang -b clang-19 --depth=1 "$CLANGDIR"
-		
-CLANGDIR="/workspace"
+CHATID="-1002287610863"
+API_BOT="7596553794:AAGoeg4VypmUfBqfUML5VWt5mjivN5-3ah8"
 
-# Codename device
+DEVICE="Redmi Note 4/4X"
 CODENAME="mido"
+KERNEL_NAME="Teletubies 🕊️Kernel"
 
-# Defconfig file for building
-CONFIG_NAME="teletubies_defconfig"
+DEFCONFIG="teletubies_defconfig"
 
-# AnyKernel3 repository and branch
-ANYKERNEL_REPO="https://github.com/malkist01/anykernel.git"
-ANYKERNEL_BRANCH="master"
-ANYKERNEL_DIR="$KERNEL_DIR/AnyKernel3"
+AnyKernel="https://github.com/malkist01/anykernel.git"
+AnyKernelbranch="master"
 
-# Kernel flashable file name
-KERNEL_FLASH_NAME="Teletubies_kernel_$CODENAME"
+HOSST="android"
+USEER="malkist"
 
-# Kernel source branch and latest commit id
-KERNEL_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-KERNEL_COMMIT_ID=$(git rev-parse --short=7 HEAD)
+TOOLCHAIN="clang"
 
-# Telegram bot token and group chat id
-CHAT_ID="-1002287610863"
-BOT_TOKEN="7596553794:AAGoeg4VypmUfBqfUML5VWt5mjivN5-3ah8"
+# setup telegram env
+export BOT_MSG_URL="https://api.telegram.org/bot$API_BOT/sendMessage"
+export BOT_BUILD_URL="https://api.telegram.org/bot$API_BOT/sendDocument"
 
-
-# Log file path
-LOG_FILE="$KERNEL_DIR/build.log"
-
-#=============================#
-#     TELEGRAM FUNCTIONS     #
-#=============================#
-
-# Escape characters for markdown-v2 formatting in telegram
-escape_markdown_v2() { 
-    echo "$1" | sed -e 's/\\/\\\\/g' -e 's/_/\\_/g' -e 's/\*/\\*/g' -e 's/\[/\\[/g' -e 's/\]/\\]/g' -e 's/(/\\(/g' -e 's/)/\\)/g' -e 's/~/\\~/g' -e 's/`/\\`/g' -e 's/>/\\>/g' -e 's/#/\\#/g' -e 's/+/\\+/g' -e 's/-/\\-/g' -e 's/=/\\=/g' -e 's/|/\\|/g' -e 's/{/\\{/g' -e 's/}/\\}/g';
+tg_post_msg() {
+        curl -s -X POST "$BOT_MSG_URL" -d chat_id="$2" \
+        -d "parse_mode=html" \
+        -d text="$1"
 }
 
-# Send a text message to telegram
-send_telegram_message() {
-    local MESSAGE="$1"
-    curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
-        -d "chat_id=$CHAT_ID" \
-        -d "text=$MESSAGE"
+tg_post_build() {
+        #Post MD5Checksum alongwith for easeness
+        MD5CHECK=$(md5sum "$1" | cut -d' ' -f1)
+
+        #Show the Checksum alongwith caption
+        curl --progress-bar -F document=@"$1" "$BOT_BUILD_URL" \
+        -F chat_id="$2" \
+        -F "disable_web_page_preview=true" \
+        -F "parse_mode=html" \
+        -F caption="$3 build finished in $(($Diff / 60)) minutes and $(($Diff % 60)) seconds | <b>MD5 Checksum : </b><code>$MD5CHECK</code>"
 }
 
-# Send a file to telegram
-send_telegram_file() {
-    local FILE_PATH="$1"
-    local FILE_NAME=$(basename "$FILE_PATH")
-    local ESCAPED_NAME=$(escape_markdown_v2 "$FILE_NAME")
-    local CAPTION="\`$ESCAPED_NAME\`"
-
-    curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendDocument" \
-        -F "chat_id=$CHAT_ID" \
-        -F "document=@$FILE_PATH" \
-        -F "caption=$CAPTION" \
-        -F "parse_mode=MarkdownV2"
+tg_error() {
+        curl --progress-bar -F document=@"$1" "$BOT_BUILD_URL" \
+        -F chat_id="$2" \
+        -F "disable_web_page_preview=true" \
+        -F "parse_mode=html" \
+        -F caption="$3Failed to build , check <code>error.log</code>"
 }
 
-#=============================#
-#      STOP HANDLING         #
-#=============================#
+# Now let's clone gcc/clang on HOME dir
+# And after that , the script start the compilation of the kernel it self
+# For regen the defconfig . use the regen.sh script
 
-# Handle script interruption (SIGINT or error)
-stop_handler() {
-    send_telegram_message "⚠️ Compilation was unexpectedly stopped!"
-    [ -f "$LOG_FILE" ] && send_telegram_file "$LOG_FILE"
-    exit 1
-}
-
-# Trap interrupt and error signals
-trap stop_handler ERR INT
-
-#=============================#
-#         START BUILD         #
-#=============================#
-
-# Notify build start
-send_telegram_message "🔨 Starting kernel compilation for $CONFIG_NAME on branch $KERNEL_BRANCH..."
-
-# Export environment variables for kernel build
-export KBUILD_BUILD_USER=malkist
-export KBUILD_BUILD_HOST=android
-export USE_CCACHE=1
-export PATH="$CLANGDIR/bin:$PATH"
-
-# Clean up previous build
-rm -f "$LOG_FILE"
-rm -rf "$OUT_DIR"
-mkdir -p "$OUT_DIR"
-make mrproper
-
-# Generate defconfig
-make O="$OUT_DIR" ARCH=arm64 "$CONFIG_NAME"
-
-# Compile the kernel
-make -j"$(nproc --all)" \
-    O="$OUT_DIR" \
-    ARCH=arm64 \
-    CC=clang \
-    LD=ld.lld \
-    AR=llvm-ar \
-    AS=llvm-as \
-    NM=llvm-nm \
-    OBJCOPY=llvm-objcopy \
-    OBJDUMP=llvm-objdump \
-    STRIP=llvm-strip \
-    CROSS_COMPILE=aarch64-linux-gnu- \
-    CROSS_COMPILE_ARM32=arm-linux-gnueabi- 2>&1 | tee -a "$LOG_FILE"
-
-# Store build result
-BUILD_RESULT=${PIPESTATUS[0]}
-
-# If compilation fails, notify and exit
-if [ "$BUILD_RESULT" -ne 0 ]; then
-    send_telegram_message "❌ Compilation failed!"
-    [ -f "$LOG_FILE" ] && send_telegram_file "$LOG_FILE"
-    exit 1
+if [ "$TOOLCHAIN" == gcc ]; then
+	if [ ! -d "$HOME/gcc64" ] && [ ! -d "$HOME/gcc32" ]
+	then
+		echo -e "$green << cloning gcc from arter >> \n $white"
+		git clone --depth=1 https://github.com/mvaisakh/gcc-arm64 "$HOME"/gcc64
+		git clone --depth=1 https://github.com/mvaisakh/gcc-arm "$HOME"/gcc32
+	fi
+	export PATH="$HOME/gcc64/bin:$HOME/gcc32/bin:$PATH"
+	export STRIP="$HOME/gcc64/aarch64-elf/bin/strip"
+	export KBUILD_COMPILER_STRING=$("$HOME"/gcc64/bin/aarch64-elf-gcc --version | head -n 1)
+elif [ "$TOOLCHAIN" == clang ]; then
+	if [ ! -d "$HOME/proton_clang" ]
+	then
+		echo -e "$green << cloning proton clang >> \n $white"
+		git clone --depth=1 https://gitlab.com/itsshashanksp/android_prebuilts_clang_host_linux-x86_clang-r547379.git "$HOME"/proton_clang
+	fi
+	export PATH="$HOME/proton_clang/bin:$PATH"
+	export STRIP="$HOME/proton_clang/aarch64-linux-gnu/bin/strip"
+	export KBUILD_COMPILER_STRING=$("$HOME"/proton_clang/bin/clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')
 fi
 
-#=============================#
-#      PATCH KPM IF ENABLED   #
-#=============================#
+# Setup build process
 
-# Patch kpm only if CONFIG_KPM=y
-if grep -q "^CONFIG_KPM=y" "$OUT_DIR/.config"; then
-    cd "$KERNEL_IMAGE_DIR"
+build_kernel() {
+Start=$(date +"%s")
 
-    # Download patch_linux from latest release
-    PATCH_URL="https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/latest/download/patch_linux"
-    if ! curl -L -o patch_linux "$PATCH_URL"; then
-        send_telegram_message "❌ Failed to download patch_linux"
-        exit 1
-    fi
-
-    # Make patch executable and run
-    chmod +x patch_linux
-    if ! ./patch_linux; then
-        send_telegram_message "❌ Failed to apply patch"
-        exit 1
-    fi
-
-    # Replace Image with patched oImage
-    if [ -f "oImage" ]; then
-        rm -f Image Image.gz-dtb
-        mv oImage Image
-    else
-        send_telegram_message "❌ Patching failed - oImage not found"
-        exit 1
-    fi
-
-    # Compress and append DTBs
-    gzip -c Image > Image.gz
-    cat Image.gz dts/*/*.dtb > Image.gz-dtb
-
-    # Back to working directory
-    cd "$KERNEL_DIR"
+if [ "$TOOLCHAIN" == clang  ]; then
+	echo clang
+	make -j$(nproc --all) O=out \
+                              ARCH=arm64 \
+                              LLVM=1 \
+                              LLVM_IAS=1 \
+                              AR=llvm-ar \
+                              NM=llvm-nm \
+                              LD=ld.lld \
+                              OBJCOPY=llvm-objcopy \
+                              OBJDUMP=llvm-objdump \
+                              STRIP=llvm-strip \
+                              CC=clang \
+                              CLANG_TRIPLE=aarch64-linux-gnu- \
+                              CROSS_COMPILE=aarch64-linux-android- \
+	                      CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+	                      CONFIG_DEBUG_SECTION_MISMATCH=y \
+	                      CONFIG_NO_ERROR_ON_MISMATCH=y   2>&1 | tee error.log
+elif [ "$TOOLCHAIN" == gcc  ]; then
+	echo gcc
+	make -j$(nproc --all) O=out \
+			      ARCH=arm64 \
+			      CROSS_COMPILE=aarch64-elf- \
+			      CROSS_COMPILE_ARM32=arm-eabi- 2>&1 | tee error.log
 fi
 
-#=============================#
-#     CREATE FLASHABLE ZIP    #
-#=============================#
+End=$(date +"%s")
+Diff=$(($End - $Start))
+}
 
-# If kernel image exists, package it
-if [ -f "$KERNEL_IMAGE" ]; then
+export IMG="$MY_DIR"/out/arch/arm64/boot/Image.gz-dtb
 
-    # Clone AnyKernel3 if it doesn't exist
-    if [ ! -d "$ANYKERNEL_DIR" ]; then
-        git clone "$ANYKERNEL_REPO" "$ANYKERNEL_DIR"
-    fi
+# Let's start
 
-    # Ensure correct branch
-    cd "$ANYKERNEL_DIR"
-    git fetch origin
-    git checkout "$ANYKERNEL_BRANCH"
-    cd "$KERNEL_DIR"
+echo -e "$green << doing pre-compilation process >> \n $white"
+export ARCH=arm64
+export SUBARCH=arm64
+export HEADER_ARCH=arm64
 
-    # Copy compiled kernel image to AnyKernel
-    cp "$KERNEL_IMAGE" "$ANYKERNEL_DIR/Image.gz-dtb"
+export KBUILD_BUILD_HOST="$HOSST"
+export KBUILD_BUILD_USER="$USEER"
 
-    # Create flashable zip
-    cd "$ANYKERNEL_DIR"
-    ZIP_NAME="${KERNEL_FLASH_NAME}-$(date +%Y%m%d)-${KERNEL_COMMIT_ID}.zip"
-    zip -r9 "../$ZIP_NAME" ./* > /dev/null
-    cd "$KERNEL_DIR"
+mkdir -p out
 
-    # Send zip and log file to telegram
-    send_telegram_file "$ZIP_NAME"
-    send_telegram_file "$LOG_FILE"
-    send_telegram_message "✅ Compilation completed, Flashable zip is ready."
+make O=out clean && make O=out mrproper
+make "$DEFCONFIG" O=out
 
-# If kernel image doesn't exists, notify and exit
-else
-    send_telegram_message "❌ Build succeeded, but kernel image not found!"
-    send_telegram_file "$LOG_FILE"
-fi
+echo -e "$yellow << compiling the kernel >> \n $white"
+tg_post_msg "<code>Building Image.gz-dtb</code>" "$CHATID"
+
+build_kernel || error=true
+
+DATE=$(date +"%Y%m%d-%H%M%S")
+KERVER=$(make kernelversion)
+
+        if [ -f "$IMG" ]; then
+                echo -e "$green << Build completed in $(($Diff / 60)) minutes and $(($Diff % 60)) seconds >> \n $white"
+        else
+                echo -e "$red << Failed to compile the kernel , Check up to find the error >>$white"
+                tg_error "error.log" "$CHATID"
+                rm -rf out
+                rm -rf testing.log
+                rm -rf error.log
+                exit 1
+        fi
+
+        if [ -f "$IMG" ]; then
+                echo -e "$green << cloning AnyKernel from your repo >> \n $white"
+                git clone "$AnyKernel" --single-branch -b "$AnyKernelbranch" zip
+                echo -e "$yellow << making kernel zip >> \n $white"
+                cp -r "$IMG" zip/
+                cd zip
+                mv Image.gz-dtb zImage
+                export ZIP="$KERNEL_NAME"-"$CODENAME"-"$DATE"
+                zip -r "$ZIP" *
+                curl -sLo zipsigner-3.0.jar https://raw.githubusercontent.com/Hunter-commits/AnyKernel/master/zipsigner-3.0.jar
+                java -jar zipsigner-3.0.jar "$ZIP".zip "$ZIP"-signed.zip
+                tg_post_msg "<b>=============================</b> %0A <b>× TeletubiesKernel For Redmi note 4/4x ×</b> %0A <b>=============================</b> %0A%0A <b>Date : </b> <code>$(TZ=Asia/Jakarta date)</code> %0A%0A <b>Device Code Name:</b> <code>$CODENAME</code> %0A%0A <b>Kernel Version :</b> <code>$KERVER</code> %0A%0A <b>Developer:</b> @Teletubies %0A%0A <b>Support group:</b> t.me/teletubieskernelmido %0A%0A <b>Channel:</b> t.me/teletubiesupdates %0A%0A <b>Changelog:</b> %0A https://github.com/malkist01/kernel_mido/commits/normal %0A%0A <b>Download Normal version:</b> %0A https://t.me/fkupdates/ %0A%0A <b>Download Ksu version:</b> %0A https://t.me/teletubies/ #teletubieskernel #mido" "$CHATID"
+                tg_post_build "$ZIP"-signed.zip "$CHATID"
+                cd ..
+                rm -rf error.log
+                rm -rf out
+                rm -rf zip
+                rm -rf testing.log
+                exit
+        fi
