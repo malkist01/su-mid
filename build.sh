@@ -55,6 +55,7 @@ if [[ ! -d "$MY_DIR" ]]; then MY_DIR="$PWD"; fi
 CHATID="-1002287610863"
 API_BOT="7596553794:AAGoeg4VypmUfBqfUML5VWt5mjivN5-3ah8"
 
+IMG=$(pwd)/out/arch/arm64/boot/Image.gz-dtb
 DEVICE="Redmi Note 4/4X"
 CODENAME="mido"
 KERNEL_NAME="TeletubiesKernel"
@@ -64,8 +65,8 @@ DEFCONFIG="teletubies_defconfig"
 AnyKernel="https://github.com/Hunter-commits/anykernel.git"
 AnyKernelbranch="master"
 
-HOSST="Alone's Buildbot"
-USEER="Alone0316"
+HOSST="android"
+USEER="malkist"
 
 TOOLCHAIN="clang"
 
@@ -132,7 +133,7 @@ Start=$(date +"%s")
 if [ "$TOOLCHAIN" == clang  ]; then
 	echo clang
 	make -j$(nproc --all) O=out \
-                              ARCH=arm64 \
+                          ARCH=arm64 \
 	                      CC="ccache clang" \
 	                      AR=llvm-ar \
 	                      NM=llvm-nm \
