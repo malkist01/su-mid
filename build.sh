@@ -57,15 +57,15 @@ API_BOT="7596553794:AAGoeg4VypmUfBqfUML5VWt5mjivN5-3ah8"
 
 DEVICE="Redmi Note 4/4X"
 CODENAME="mido"
-KERNEL_NAME="Teletubies 🕊️Kernel"
+KERNEL_NAME="TeletubiesKernel"
 
 DEFCONFIG="teletubies_defconfig"
 
-AnyKernel="https://github.com/malkist01/anykernel.git"
+AnyKernel="https://github.com/Hunter-commits/anykernel.git"
 AnyKernelbranch="master"
 
-HOSST="android"
-USEER="malkist"
+HOSST="Alone's Buildbot"
+USEER="Alone0316"
 
 TOOLCHAIN="clang"
 
@@ -117,7 +117,7 @@ elif [ "$TOOLCHAIN" == clang ]; then
 	if [ ! -d "$HOME/proton_clang" ]
 	then
 		echo -e "$green << cloning proton clang >> \n $white"
-		git clone --depth=1 https://gitlab.com/itsshashanksp/android_prebuilts_clang_host_linux-x86_clang-r547379.git "$HOME"/proton_clang
+		git clone --depth=1 https://github.com/kdrag0n/proton-clang.git "$HOME"/proton_clang
 	fi
 	export PATH="$HOME/proton_clang/bin:$PATH"
 	export STRIP="$HOME/proton_clang/aarch64-linux-gnu/bin/strip"
@@ -133,20 +133,21 @@ if [ "$TOOLCHAIN" == clang  ]; then
 	echo clang
 	make -j$(nproc --all) O=out \
                               ARCH=arm64 \
-                              LLVM=1 \
-                              LLVM_IAS=1 \
-                              AR=llvm-ar \
-                              NM=llvm-nm \
-                              LD=ld.lld \
-                              OBJCOPY=llvm-objcopy \
-                              OBJDUMP=llvm-objdump \
-                              STRIP=llvm-strip \
-                              CC=clang \
-                              CLANG_TRIPLE=aarch64-linux-gnu- \
-                              CROSS_COMPILE=aarch64-linux-android- \
-	                          CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-	                          CONFIG_DEBUG_SECTION_MISMATCH=y \
-	                          CONFIG_NO_ERROR_ON_MISMATCH=y   2>&1 | tee error.log
+	                      CC="ccache clang" \
+	                      AR=llvm-ar \
+	                      NM=llvm-nm \
+	                      STRIP=llvm-strip \
+	                      OBJCOPY=llvm-objcopy \
+	                      OBJDUMP=llvm-objdump \
+	                      OBJSIZE=llvm-size \
+	                      READELF=llvm-readelf \
+	                      HOSTCC=clang \
+	                      HOSTCXX=clang++ \
+	                      HOSTAR=llvm-ar \
+	                      CROSS_COMPILE=aarch64-linux-gnu- \
+	                      CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+	                      CONFIG_DEBUG_SECTION_MISMATCH=y \
+	                      CONFIG_NO_ERROR_ON_MISMATCH=y   2>&1 | tee error.log
 elif [ "$TOOLCHAIN" == gcc  ]; then
 	echo gcc
 	make -j$(nproc --all) O=out \
@@ -204,9 +205,9 @@ KERVER=$(make kernelversion)
                 mv Image.gz-dtb zImage
                 export ZIP="$KERNEL_NAME"-"$CODENAME"-"$DATE"
                 zip -r "$ZIP" *
-                curl -sLo zipsigner-3.0.jar https://github.com/malkist01/zipsigner/-/raw/master/bin/zipsigner-3.0-dexed.jar
+                curl -sLo zipsigner-3.0.jar https://raw.githubusercontent.com/Hunter-commits/AnyKernel/master/zipsigner-3.0.jar
                 java -jar zipsigner-3.0.jar "$ZIP".zip "$ZIP"-signed.zip
-                tg_post_msg "<b>=============================</b> %0A <b>× TeletubiesKernel For Redmi note 4/4x ×</b> %0A <b>=============================</b> %0A%0A <b>Date : </b> <code>$(TZ=Asia/Jakarta date)</code> %0A%0A <b>Device Code Name:</b> <code>$CODENAME</code> %0A%0A <b>Kernel Version :</b> <code>$KERVER</code> %0A%0A "$CHATID"
+                tg_post_msg "<b>=============================</b> %0A <b>× FussionKernel For Redmi note 4/4x ×</b> %0A <b>=============================</b> %0A%0A <b>Date : </b> <code>$(TZ=India/Kolkata date)</code> %0A%0A <b>Device Code Name:</b> <code>$CODENAME</code> %0A%0A <b>Kernel Version :</b> <code>$KERVER</code> %0A%0A <b>Developer:</b> @Alone0316 %0A%0A <b>Support group:</b> t.me/fussionkernelmido %0A%0A <b>Channel:</b> t.me/fkupdates %0A%0A <b>Changelog:</b> %0A https://github.com/Alone0316/kernel_mido/commits/normal %0A%0A <b>Download Normal version:</b> %0A https://t.me/fkupdates/ %0A%0A <b>Download Overclock version:</b> %0A https://t.me/fkupdates/ #fussionkernel #mido" "$CHATID"
                 tg_post_build "$ZIP"-signed.zip "$CHATID"
                 cd ..
                 rm -rf error.log
