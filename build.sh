@@ -196,7 +196,10 @@ KERVER=$(make kernelversion)
                 exit 1
         fi
 
-        if [ -f "$IMG" ]; then
+    if ! [ -a "$IMG" ]; then
+        finderr
+        exit 1
+    fi
                 echo -e "$green << cloning AnyKernel from your repo >> \n $white"
                 git clone "$AnyKernel" --single-branch -b "$AnyKernelbranch" zip
                 echo -e "$yellow << making kernel zip >> \n $white"
@@ -216,3 +219,4 @@ KERVER=$(make kernelversion)
                 rm -rf testing.log
                 exit
         fi
+
